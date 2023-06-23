@@ -1,0 +1,725 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model ActivityLogModel {
+  uuid               String                   @id(map: "PK_22f0b4eb8ee532ce5b991c7c818") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userUuid           String                   @map("user_uuid") @db.Uuid
+  clientUuid         String                   @map("client_uuid") @db.Uuid
+  eventType          ActivityLogEventTypeEnum @map("event_type")
+  resourceIdentifier String                   @map("resource_identifier")
+  event              Json?
+  createdAt          DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  clientModel        ClientModel              @relation(fields: [clientUuid], references: [clientUuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_6eb819f4e7b0393094af349a52e")
+  userModel          UserModel                @relation(fields: [userUuid], references: [userUuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_5ee7cbb772ad17c6eb3a0c8a362")
+
+  @@map("activity_log")
+}
+
+model ClauseModel {
+  uuid           String           @id(map: "PK_bf4998368b722b7b208d8f2539b") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  clauseStatus   ClauseStatusEnum @map("clause_status")
+  clauseRefPgSec String?          @map("clause_ref_pg_sec") @db.VarChar(50)
+  clauseAbstract String?          @map("clause_abstract")
+  leaseUuid      String           @map("lease_uuid") @db.Uuid
+  clauseTypeUuid String           @map("clause_type_uuid") @db.Uuid
+  noticeDate     DateTime?        @map("notice_date") @db.Date
+  effectiveDate  DateTime?        @map("effective_date") @db.Date
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt      DateTime?        @map("deleted_at") @db.Timestamptz(6)
+  clientUuid     String           @map("client_uuid") @db.Uuid
+  clauseType     ClauseTypeModel  @relation(fields: [clauseTypeUuid], references: [uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_34fc5f9384cc051d8ae7aa753a2")
+  clientModel    ClientModel      @relation(fields: [clientUuid], references: [clientUuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_d7d0bd0b6e20e886cb78ca61e64")
+  lease          LeaseModel       @relation(fields: [leaseUuid], references: [uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_f9bc2c945deff923b9244d4642b")
+
+  @@map("clause")
+}
+
+model ClauseTypeModel {
+  uuid         String        @id(map: "PK_d23eb5f8553d69a9cea8d2e1c60") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name         String        @unique(map: "UQ_c86870e321d9072816e60920abf") @db.VarChar(50)
+  category     String        @db.VarChar(50)
+  isActionable Boolean       @map("is_actionable")
+  clauses      ClauseModel[]
+
+  @@map("clause_type")
+}
+
+model ContactModel {
+  uuid                   String              @id(map: "PK_126b452db77c24d32b5885f4468") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  attentionName          String?             @map("attn_name") @db.VarChar(200)
+  organizationName       String              @map("organization_name") @db.VarChar(200)
+  address1               String?             @db.VarChar(200)
+  address2               String?             @db.VarChar(200)
+  city                   String?             @db.VarChar(100)
+  stateProvince          String?             @map("state_province") @db.VarChar(100)
+  postalCode             String?             @map("postal_code") @db.VarChar(50)
+  phoneDirect            String?             @map("phone_direct") @db.VarChar(50)
+  phoneMobile            String?             @map("phone_mobile") @db.VarChar(50)
+  faxNumber              String?             @map("fax_number") @db.VarChar(50)
+  email                  String?             @db.VarChar(200)
+  taxId                  String?             @map("tax_id") @db.VarChar(50)
+  vendorId               String?             @map("vendor_id") @db.VarChar(50)
+  note                   String?
+  clientUuid             String              @map("client_uuid") @db.Uuid
+  primaryContactTypeUuid String              @map("primary_contact_type_uuid") @db.Uuid
+  countryUuid            String              @map("country_uuid") @db.Uuid
+  firstName              String              @map("first_name") @db.VarChar(50)
+  lastName               String              @map("last_name") @db.VarChar(100)
+  createdAt              DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt              DateTime?           @map("deleted_at") @db.Timestamptz(6)
+  clientModel            ClientModel         @relation(fields: [clientUuid], references: [clientUuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_69d11327099ea3214d4702669c1")
+  country                CountryModel        @relation(fields: [countryUuid], references: [uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_ec415a6bace944d3aa751441ed2")
+  contactType            ContactTypeModel    @relation(fields: [primaryContactTypeUuid], references: [uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_f2dcb2c46fb883c132b39dab614")
+  leaseContacts          LeaseContactModel[]
+
+  @@map("contact")
+}
+
+model ContactTypeModel {
+  uuid          String              @id(map: "PK_29056af2fe5a22795fa58cf300f") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name          String              @db.VarChar(50)
+  clientUuid    String              @map("client_uuid") @db.Uuid
+  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt     DateTime?           @map("deleted_at") @db.Timestamptz(6)
+  clientModel   ClientModel         @relation(fields: [clientUuid], references: [clientUuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_79445fa96dc35cc97edfdeca8e3")
+  contacts      ContactModel[]
+  leaseContacts LeaseContactModel[]
+
+  @@unique([name, clientUuid, deletedAt])
+  @@map("contact_type")
+}
+
+model CostDataModel {
+  uuid             String            @id(map: "PK_44819bc1b79e1552c42fe97661e") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  periodDate       DateTime          @map("period_date") @db.Date
+  payDate          DateTime          @map("pay_date") @db.Date
+  periodAmount     Decimal           @map("period_amount") @db.Decimal(14, 4)
+  costScheduleUuid String            @map("cost_sched_uuid") @db.Uuid
+  costSchedule     CostScheduleModel @relation(fields: [costScheduleUuid], references: [uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_6a031df8433cdd0cd417afb56eb")
+
+  @@index([periodDate])
+  @@index([costScheduleUuid])
+  @@map("cost_data")
+}
+
+model CostScheduleModel {
+  uuid                     String                         @id(map: "PK_21d79706d0b37cbe5db6449e605") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  amount                   Decimal                        @db.Decimal(14, 4)
+  escalationRate           Decimal                        @default(0) @map("escalation_rate")
+  frequency                CostScheduleFrequencyEnum
+  amountUnitType           CostScheduleAmountUnitTypeEnum @map("amount_unit_type")
+  status                   CostScheduleStatusEnum
+  note                     String?
+  leaseUuid                String                         @map("lease_uuid") @db.Uuid
+  costScheduleCategoryUuid String                         @map("cost_sched_category_uuid") @db.Uuid
+  startDate                DateTime                       @map("start_date") @db.Date
+  endDate                  DateTime                       @map("end_date") @db.Date
+  createdAt                DateTime                       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime                       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt                DateTime?                      @map("deleted_at") @db.Timestamptz(6)
+  currencyCode             String                         @map("currency_code")
+  costScheduleCategory     CostScheduleCategoryModel      @relation(fields: [costScheduleCategoryUuid], references: [uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_110361aa958ff7dc423b257c1d3")
+  currencyModel            CurrencyModel                  @relation("cost_schedTocurrency", fields: [currencyCode], references: [currencyCode], onDelete: NoAction, onUpdate: NoAction, map: "FK_5e4f5b61954d7f1abe7c1c89aff")
+  lease                    LeaseModel                     @relation(fields: [leaseUuid], references: [uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_c37f66ad127ce99ebbe5b52c18c")
+  costData                 CostDataModel[]
+
+  @@index([leaseUuid, deletedAt])
+  @@index([costScheduleCategoryUuid])
+  @@map("cost_sched")
+}
+
+model CostScheduleCategoryModel {
+  uuid                  String                                @id(map: "PK_e096e3d20f14589202a48d409a9") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  categoryCode          String                                @map("category_code")
+  categoryName          String                                @map("category_name")
+  subCategoryCode       String                                @map("sub_category_code")
+  subCategoryName       String                                @map("sub_category_name")
+  accountCode           String                                @map("account_code")
+  sortOrder             Int                                   @default(0) @map("sort_order")
+  amountPos             Int                                   @map("amount_pos_neg")
+  isMarketCompatible    Boolean                               @map("is_market_comp")
+  isOneTime             Boolean                               @map("is_one_time")
+  isCostToAchieve       Boolean                               @map("is_cost_to_achieve")
+  clientUuid            String                                @map("client_uuid") @db.Uuid
+  defaultFrequency      CostScheduleFrequencyEnum?            @map("default_frequency")
+  defaultAmountUnitType CostScheduleAmountUnitTypeEnum?       @map("default_amount_unit_type")
+  defaultStatus         CostScheduleStatusEnum?               @map("default_status")
+  reportingType         CostScheduleCategoryReportingTypeEnum @map("reporting_type")
+  createdAt             DateTime                              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime                              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt             DateTime?                             @map("deleted_at") @db.Timestamptz(6)
+  clientModel           ClientModel                           @relation(fields: [clientUuid], references: [clientUuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_15a30c43ac7f4234b72678da644")
+  costSchedule          CostScheduleModel[]
+
+  @@unique([subCategoryName, clientUuid], map: "idx_costschedcategory_unique_subcategoryname")
+  @@unique([subCategoryCode, clientUuid], map: "idx_costschedcategory_unique_subcategorycode")
+  @@unique([clientUuid, categoryName, sortOrder], map: "idx_costschedcategory_unique_sortorder")
+  @@index([clientUuid, deletedAt])
+  @@map("cost_sched_category")
+}
+
+model CountryModel {
+  uuid          String            @id(map: "PK_4e06beff3ecfb1a974312fe536d") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name          String            @unique(map: "UQ_2c5aa339240c0c3ae97fcc9dc4c")
+  officialName  String            @unique(map: "UQ_d8b04c2404319fb01b947daf48c") @map("official_name")
+  country2Code  String            @unique(map: "UQ_fea5ff474d3ef3f7da0d6fa4b6d") @map("country2_code") @db.VarChar(2)
+  country3Code  String            @unique(map: "UQ_924932781c389ec402071f90514") @map("country3_code") @db.VarChar(3)
+  numericCode   Int               @unique(map: "UQ_67ee43958039945f32daf8f0816") @map("numeric_code")
+  countryRegion CountryRegionEnum @default(Not_Specified) @map("country_region")
+  latitude      Float
+  longitude     Float
+  contact       ContactModel[]
+  property      PropertyModel[]
+
+  @@map("country")
+}
+
+model LeaseModel {
+  uuid                     String                  @id(map: "PK_49ed1e942e87c17872181c2af81") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  leaseStatus              LeaseStatusEnum         @default(Inactive) @map("lease_status")
+  propertyUuid             String                  @map("property_uuid") @db.Uuid
+  leaseAbstractStatus      LeaseAbstractStatusEnum @default(Draft) @map("lease_abstract_status")
+  rentType                 LeaseRentTypeEnum?      @map("rent_type")
+  leaseTypeUuid            String                  @map("lease_type_uuid") @db.Uuid
+  leaseBusinessUuid        String?                 @map("lease_business_uuid") @db.Uuid
+  leaseAreaTypeUuid        String?                 @map("lease_area_type_uuid") @db.Uuid
+  id                       String                  @db.VarChar(100)
+  workspaceCapacity        Int                     @default(0) @map("workspace_capacity")
+  headcountAssigned        Int                     @default(0) @map("headcount_assigned")
+  memberCount              Int                     @default(0) @map("member_count")
+  parkingSpaces            Int                     @default(0) @map("parking_spaces")
+  isVacant                 Boolean?                @map("is_vacant")
+  nameOnLease              String?                 @map("name_on_lease")
+  leaseNote                String?                 @map("lease_note")
+  rentArea                 Float?                  @map("rent_area")
+  rentAreaUnit             LeaseRentAreaUnitEnum?  @map("rent_area_unit")
+  name                     String                  @db.VarChar(100)
+  clientUuid               String                  @map("client_uuid") @db.Uuid
+  commenceDate             DateTime?               @map("commence_date") @db.Date
+  expireDate               DateTime?               @map("expire_date") @db.Date
+  expireReviewDate         DateTime?               @map("expire_review_date") @db.Date
+  possessionDate           DateTime?               @map("possession_date") @db.Date
+  originalCommencementDate DateTime?               @map("original_commencement_date") @db.Date
+  executionDate            DateTime?               @map("execution_date") @db.Date
+  createdAt                DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime                @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt                DateTime?               @map("deleted_at") @db.Timestamptz(6)
+  baseYear                 Int?                    @map("base_year")
+  baseProrataPct           Decimal                 @default(0) @map("base_prorata_pct") @db.Decimal(5, 4)
+  certInsuranceExpireDate  DateTime?               @map("cert_insurance_expire_date") @db.Date
+  secDepPayDate            DateTime?               @map("sec_dep_pay_date") @db.Date
+  secDepReturnDate         DateTime?               @map("sec_dep_return_date") @db.Date
+  secDepPayAmt             Decimal                 @default(0) @map("sec_dep_pay_amt") @db.Decimal(14, 4)
+  secDepNote               String?                 @map("sec_dep_note")
+  currencyCode             String                  @default("USD") @map("currency_code")
+  clientModel              ClientModel             @relation(fields: [clientUuid], references: [clientUuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_a01c58300721fe7529601e1c73c")
+  leaseAreaType            LeaseAreaTypeModel?     @relation(fields: [leaseAreaTypeUuid], references: [uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_3efbe0ba99067a1453ee1711151")
+  leaseBusiness            LeaseBusinessModel?     @relation(fields: [leaseBusinessUuid], references: [uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_672b3068c160efd45384e3f28d8")
+  leaseType                LeaseTypeModel          @relation(fields: [leaseTypeUuid], references: [uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_6e02ec0f3eaeb89b15bed54105a")
+  property                 PropertyModel           @relation(fields: [propertyUuid], references: [uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_5a6a16c2180b91c21190a5211a8")
+  clause                   ClauseModel[]
+  costSchedule             CostScheduleModel[]
+  leaseContact             LeaseContactModel[]
+  responsibility           ResponsibilityModel[]
+
+  @@index([uuid, leaseStatus, deletedAt, clientUuid])
+  @@index([name, id])
+  @@map("lease")
+}
+
+model LeaseAreaTypeModel {
+  uuid   String       @id(map: "PK_10abe758b271cd8a808ec627b33") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name   String       @unique(map: "UQ_484463a95a67185165660787103") @db.VarChar(50)
+  leases LeaseModel[]
+
+  @@map("lease_area_type")
+}
+
+model LeaseBusinessModel {
+  uuid        String       @id(map: "PK_0f33831225468ecc9ec30c7705f") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name        String       @db.VarChar(50)
+  clientUuid  String       @map("client_uuid") @db.Uuid
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?    @map("deleted_at") @db.Timestamptz(6)
+  clientModel ClientModel  @relation(fields: [clientUuid], references: [clientUuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_2ba4b71e87d758449256215b51d")
+  leases      LeaseModel[]
+
+  @@map("lease_business")
+}
+
+model LeaseContactModel {
+  uuid            String           @id(map: "PK_3e5f8e34bc9be2ba2e1f76f8c60") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  leaseUuid       String           @map("lease_uuid") @db.Uuid
+  contactUuid     String           @map("contact_uuid") @db.Uuid
+  contactTypeUuid String           @map("contact_type_uuid") @db.Uuid
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime?        @map("deleted_at") @db.Timestamptz(6)
+  contactType     ContactTypeModel @relation(fields: [contactTypeUuid], references: [uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_3c90f027b037f98b60d8b750971")
+  contact         ContactModel     @relation(fields: [contactUuid], references: [uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_964d54675cd9864b789ece386f3")
+  lease           LeaseModel       @relation(fields: [leaseUuid], references: [uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_86e62a8709235e6ee4172337f71")
+
+  @@map("lease_contact")
+}
+
+model LeaseTypeModel {
+  uuid             String       @id(map: "PK_ab073cbf46ab7248f4ef4c71fa7") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name             String       @unique(map: "UQ_88a5a5cfe0062004081244867c0")
+  positiveNegative Int          @map("positive_negative")
+  leases           LeaseModel[]
+
+  @@map("lease_type")
+}
+
+model MarketMetroModel {
+  uuid        String          @id(map: "PK_1a16f62780d151d2ad9b65164d9") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name        String          @db.VarChar(100)
+  clientUuid  String          @map("client_uuid") @db.Uuid
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?       @map("deleted_at") @db.Timestamptz(6)
+  clientModel ClientModel     @relation(fields: [clientUuid], references: [clientUuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_95a2b5747a5f12c3893298c02b5")
+  properties  PropertyModel[]
+
+  @@map("market_metro")
+}
+
+model migrations {
+  id        Int    @id(map: "PK_8c82d7f526340ab734260ea46be") @default(autoincrement())
+  timestamp BigInt
+  name      String @db.VarChar
+}
+
+model PropertyModel {
+  uuid              String                     @id(map: "PK_ac52d2729d3e3a963731089e72e") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name              String                     @db.VarChar(100)
+  streetAddress1    String?                    @map("street_address1")
+  streetAddress2    String?                    @map("street_address2")
+  id                String                     @db.VarChar(50)
+  stateProvince     String?                    @map("state_province") @db.VarChar(100)
+  msaName           String?                    @map("msa_name") @db.VarChar(80)
+  propertyNote      String?                    @map("property_note")
+  propertyStatus    PropertyStatusEnum         @default(Proposed) @map("property_status")
+  propertyClass     PropertyClassEnum          @default(Unknown) @map("property_class")
+  city              String?                    @db.VarChar(100)
+  postalCode        String?                    @map("postal_code") @db.VarChar(50)
+  county            String?                    @db.VarChar(100)
+  clientUuid        String                     @map("client_uuid") @db.Uuid
+  altId             String?                    @map("alt_id") @db.VarChar(50)
+  ownershipType     PropertyOwnershipTypeEnum? @map("ownership_type")
+  propertyTypeUuid  String?                    @map("property_type_uuid") @db.Uuid
+  regionUuid        String?                    @map("region_uuid") @db.Uuid
+  countryUuid       String?                    @map("country_uuid") @db.Uuid
+  marketMetroUuid   String?                    @map("market_metro_uuid") @db.Uuid
+  latitude          Decimal?                   @db.Decimal(9, 6)
+  longitude         Decimal?                   @db.Decimal(9, 6)
+  createdAt         DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt         DateTime?                  @map("deleted_at") @db.Timestamptz(6)
+  clientModel       ClientModel                @relation(fields: [clientUuid], references: [clientUuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_adc8e1c51d203320bc21bf5ff20")
+  country           CountryModel?              @relation(fields: [countryUuid], references: [uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_7ece0c8a01266e6edc7de4f1d50")
+  marketMetro       MarketMetroModel?          @relation(fields: [marketMetroUuid], references: [uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_c67ae8e470a7e56c39e701bcc41")
+  propertyType      PropertyTypeModel?         @relation(fields: [propertyTypeUuid], references: [uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_573cabbacf94d70feabf6ab16ce")
+  region            RegionModel?               @relation(fields: [regionUuid], references: [uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_d929dfa5a115812bf8073393a2c")
+  leases            LeaseModel[]
+  ayPropertyId      String?                    @map("ay_property_id") @db.VarChar(50)
+  ayMarketName      String?                    @map("ay_market_name") @db.VarChar(50)
+  aySubMarketName   String?                    @map("ay_submarket_name") @db.VarChar(50)
+  ayMicroMarketName String?                    @map("ay_micromarket_name") @db.VarChar(50)
+
+  @@index([clientUuid, deletedAt])
+  @@index([countryUuid])
+  @@map("property")
+}
+
+model PropertyTypeModel {
+  uuid        String @id(map: "PK_d3a891f19e005bfe7affdb59eae") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name        String @default("") @map("name") @db.VarChar(50)
+  subtypeName String @default("") @map("subtype_name") @db.VarChar(50)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  clientModel ClientModel     @relation(fields: [clientUuid], references: [clientUuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_8cce74c6addaf94b7800dff2661")
+  clientUuid  String          @map("client_uuid") @db.Uuid
+  properties  PropertyModel[]
+
+  @@map("property_type")
+}
+
+model ReportModel {
+  uuid            String                @id(map: "PK_a4d712z02w125vga3ogham41aie") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  reportName      String                @map("report_name") @db.VarChar(50)
+  reportDesc      String?               @map("report_desc") @db.VarChar(250)
+  reportCategory  String                @map("report_category") @db.VarChar(50)
+  sortOrder       Int                   @default(0) @map("sort_order") @db.Integer
+  datasetName     String                @map("dataset_name") @db.Text
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime              @default(now()) @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime              @default(now()) @map("deleted_at") @db.Timestamptz(6)
+  clientUUID      String                @map("clientUUID") @db.Uuid
+  datasetType     ReportDataSetTypeEnum @map("dataset_type")
+  properties      String                @map("properties") @db.VarChar(250)
+  labelsFormatter String                @map("labels_formatter") @db.VarChar(250)
+  clientModel     ClientModel           @relation(fields: [clientUUID], references: [clientUuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_35535d8ccbe3ef803ded2856f9e")
+
+  @@map("report")
+}
+
+model RegionModel {
+  uuid      String @id(map: "PK_88ad466257b41464987ba07e96e") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  region    String @db.VarChar(50)
+  subregion String @default("") @db.VarChar(50)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  clientModel ClientModel     @relation(fields: [clientUuid], references: [clientUuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_35535d8ccbe3ef803ded2856f9e")
+  clientUuid  String          @map("client_uuid") @db.Uuid
+  property    PropertyModel[]
+
+  @@unique([clientUuid, subregion], map: "idx_region_unique_subregion")
+  @@map("region")
+}
+
+model ResponsibilityModel {
+  uuid                   String                             @id(map: "PK_d885e81f0c5cfa595d62e286690") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  responsibleParty       ResponsibilityResponsiblePartyEnum @map("responsible_party")
+  note                   String?
+  responsibilityTypeUuid String                             @map("responsibility_type_uuid") @db.Uuid
+  leaseUuid              String                             @map("lease_uuid") @db.Uuid
+  createdAt              DateTime                           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime                           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt              DateTime?                          @map("deleted_at") @db.Timestamptz(6)
+  lease                  LeaseModel                         @relation(fields: [leaseUuid], references: [uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_c62df7d1fc6bdb8d6409bbae3c4")
+  responsibilityType     ResponsibilityTypeModel            @relation(fields: [responsibilityTypeUuid], references: [uuid], onDelete: NoAction, onUpdate: NoAction, map: "FK_a4e1f5f82e9c2445736b4db9e89")
+
+  @@map("responsibility")
+}
+
+model ResponsibilityTypeModel {
+  uuid             String                @id(map: "PK_87f70d4dd2753a06abdb24c6528") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name             String                @unique(map: "UQ_310f21dbe4afeaff12815bed327") @db.VarChar(50)
+  responsibilities ResponsibilityModel[]
+
+  @@map("responsibility_type")
+}
+
+model DateDim {
+  dateDimId     Int      @id @default(autoincrement()) @map(name: "date_dim_id")
+  dateValue     DateTime @map(name: "date_value") @db.Date
+  dateYear      Int      @map(name: "date_year")
+  dayOfYear     Int      @map(name: "day_of_year")
+  qtrNum        Int      @map(name: "qtr_num")
+  qtrName       String   @map(name: "qtr_name") @db.VarChar(10)
+  monthNum      Int      @map(name: "month_num")
+  monthName     String   @map(name: "month_name") @db.VarChar(20)
+  dayOfMonthNum Int      @map(name: "day_of_month_num")
+  weekNum       Int      @map(name: "week_num")
+  dayOfWeekNum  Int      @map(name: "day_of_week_num")
+  dayOfWeekName String   @map(name: "day_of_week_name") @db.VarChar(10)
+  isWeekend     Boolean  @map(name: "is_weekend")
+  yearAndWeek   String   @map(name: "year_and_week") @db.VarChar(20)
+  yearAndMonth  String   @map(name: "year_and_month") @db.VarChar(20)
+  yearAndQtr    String   @map(name: "year_and_qtr") @db.VarChar(20)
+
+  @@map(name: "date_dim")
+}
+
+model UserModel {
+  userUuid         String @id(map: "PK_a95e949168be7b7ece1a2382fed") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  activeClientUuid String @map("active_client_uuid") @db.Uuid
+  userName         String
+  email            String @unique
+  oktaUserId       String @unique @map("okta_user_id")
+
+  firstName     String?  @map("first_name")
+  lastName      String?  @map("last_name")
+  userInitial   String?  @map("user_initial")
+  isAdmin       Boolean? @map("is_admin")
+  isFirstSignIn Boolean? @map("is_first_sign_in")
+  oktaToken     String?  @unique @map("okta_token")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  activityLog      ActivityLogModel[]
+  userClientModels UserClientModel[]
+
+  @@map("user")
+}
+
+model UserClientModel {
+  userClientUuid String @id(map: "PK_b2b886032d462253677a17fb242") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+
+  securityRole String                      @map("security_role")
+  unitMeas     UserClientModelUnitMeasEnum @default(SQF) @map("preferred_uom")
+  currencyCode String                      @default("USD") @map("preferred_currency_code")
+  formatDate   String                      @map("format_date")
+  formatNumber String                      @map("format_number")
+  timezone     String
+
+  datumPermission  String?       @map("datum_permission")
+  primusPermission String?       @map("primus_permission")
+  isAdmin          Boolean?      @default(false) @map("is_admin")
+  userLanguage     UserLanguage? @default(EN_US) @map("user_language")
+
+  clientModel   ClientModel   @relation(fields: [clientUuid], references: [clientUuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_cf2efb49db564f1f9d5ad78ce02")
+  clientUuid    String        @map("client_uuid") @db.Uuid
+  userModel     UserModel     @relation(fields: [userUuid], references: [userUuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_aa8ad9cb58e328de914f075afd0")
+  userUuid      String        @map("user_uuid") @db.Uuid
+  currencyModel CurrencyModel @relation(fields: [currencyCode], references: [currencyCode], onDelete: NoAction, onUpdate: NoAction, map: "FK_293ea9227473b457e5858e95813")
+
+  @@unique([userUuid, clientUuid], map: "IDX_7b6998aed366a93fefb331b8d8")
+  @@map("user_client")
+}
+
+model ClientModel {
+  clientUuid   String       @id(map: "PK_1877f4f250c9271781a8eb70f95") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  clientName   String       @unique(map: "IDX_480f88a019346eae487a0cd7f0")
+  clientStatus ClientStatus @default(ACTIVE) @map("client_status")
+  clientId     String       @map("client_id")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  clientGlobalId      String?                      @map("client_global_id")
+  unitMeasDefault     UserClientModelUnitMeasEnum? @map("unit_meas_default")
+  currencyCodeDefault String?                      @map("currency_code_default")
+  clientHeadLogo      String?                      @map("client_logo")
+
+  userClientModels     UserClientModel[]
+  clientCurrencyModels ClientCurrencyModel[]
+  activityLog          ActivityLogModel[]
+  clause               ClauseModel[]
+  contact              ContactModel[]
+  contactType          ContactTypeModel[]
+  costSchedCategory    CostScheduleCategoryModel[]
+  lease                LeaseModel[]
+  leaseBusiness        LeaseBusinessModel[]
+  marketMetro          MarketMetroModel[]
+  property             PropertyModel[]
+  propertyType         PropertyTypeModel[]
+  region               RegionModel[]
+  reportModel          ReportModel[]
+
+  @@index([clientUuid, deletedAt])
+  @@map("client")
+}
+
+model ClientCurrencyModel {
+  uuid         String   @id(map: "PK_aabe56f42a76ce8aefed3873eb7") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  currencyCode String   @map("currency_code")
+  exchangeRate Decimal  @map("exchange_rate") @db.Decimal(14, 6)
+  reportDate   DateTime @map("report_date") @db.Date
+  isBase       Boolean  @default(false) @map("is_base")
+
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  clientModel   ClientModel   @relation(fields: [clientUuid], references: [clientUuid], onDelete: Cascade, onUpdate: NoAction, map: "FK_323ce23bd034b9dacae4a187e1b")
+  clientUuid    String        @map("client_uuid") @db.Uuid
+  currencyModel CurrencyModel @relation(fields: [currencyCode], references: [currencyCode], onDelete: NoAction, onUpdate: NoAction, map: "FK_c2b3db79cbfa65ee872ecc02811")
+
+  @@map("client_currency")
+}
+
+model CurrencyModel {
+  currencyCode   String @id(map: "PK_409f9b5ad6c3766c4e1fda1c026") @map("currency_code")
+  currencyName   String @map("currency_name")
+  currencySymbol String @default("") @map("currency_symbol") @db.VarChar(100)
+
+  cost_sched           CostScheduleModel[]   @relation("cost_schedTocurrency")
+  clientCurrencyModels ClientCurrencyModel[]
+  userClientModels     UserClientModel[]
+
+  @@map("currency")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model typeorm_metadata {
+  type     String  @db.VarChar
+  database String? @db.VarChar
+  schema   String? @db.VarChar
+  table    String? @db.VarChar
+  name     String? @db.VarChar
+  value    String?
+
+  @@ignore
+}
+
+enum ActivityLogEventTypeEnum {
+  CreateLease
+  UpdateLease
+  DeleteLease
+  CreateProperty
+  UpdateProperty
+  DeleteProperty
+  CreateCurrencyRate
+  UpdateCurrencyRate
+  DeleteCurrencyRate
+  CreateClause
+  UpdateClause
+  DeleteClause
+  CreateCostSchedule
+  UpdateCostSchedule
+  DeleteCostSchedule
+  CreateResponsibility
+  UpdateResponsibility
+  DeleteResponsibility
+  CreateLContact
+  UpdateLContact
+  DeleteLContact
+  CreateContact
+  UpdateContact
+  DeleteContact
+}
+
+enum ClauseStatusEnum {
+  Unknown
+  Exercised
+  Unexercised
+  Declined
+  Silent
+  Not_Applicable @map("Not Applicable")
+
+  @@map("ClauseClauseStatusEnum")
+}
+
+enum CostScheduleAmountUnitTypeEnum {
+  Payment
+  Annually_per_unit_Area @map("Annually per unit Area")
+  Monthly_per_unit_Area  @map("Monthly per unit Area")
+}
+
+enum CostScheduleCategoryReportingTypeEnum {
+  Both
+  P_L  @map("P&L")
+  Cash
+}
+
+enum CostScheduleFrequencyEnum {
+  Monthly
+  Annually
+  Semi_Annually @map("Semi-Annually")
+  Quarterly
+  Onetime
+}
+
+enum CostScheduleStatusEnum {
+  Actual
+  Budget
+  Estimate
+}
+
+enum CountryRegionEnum {
+  APAC
+  Americas
+  EMEA
+  Not_Specified @map("Not Specified")
+
+  @@map("CountryCountryRegionEnum")
+}
+
+enum LeaseRentTypeEnum {
+  Not_Specified      @map("Not Specified")
+  Full_Service_Gross @map("Full Service Gross")
+  Modified_Gross     @map("Modified Gross")
+  Triple_Net         @map("Triple Net")
+}
+
+enum LeaseAbstractStatusEnum {
+  Draft
+  Review
+  Abstracted
+
+  @@map("LeaseLeaseAbstractStatusEnum")
+}
+
+enum LeaseStatusEnum {
+  Active
+  Committed
+  Inactive
+  Proposed
+
+  @@map("LeaseLeaseStatusEnum")
+}
+
+enum LeaseRentAreaUnitEnum {
+  SQF
+  SQM
+}
+
+enum PropertyOwnershipTypeEnum {
+  Leased
+  Owned
+  Serviced_Office @map("Serviced Office")
+  Ground
+  Joint_Venture   @map("Joint Venture")
+  Not_Specified   @map("Not Specified")
+  Mixed
+}
+
+enum PropertyClassEnum {
+  Trophy
+  Class_A @map("Class A")
+  Class_B @map("Class B")
+  Class_C @map("Class C")
+  Unknown
+
+  @@map("PropertyPropertyClassEnum")
+}
+
+enum PropertyStatusEnum {
+  Active
+  Inactive
+  Proposed
+  Future
+
+  @@map("PropertyPropertyStatusEnum")
+}
+
+enum ResponsibilityResponsiblePartyEnum {
+  Silent
+  Tenant
+  Landlord
+}
+
+enum UserClientModelUnitMeasEnum {
+  SQF
+  SQM
+}
+
+enum ReportDataSetTypeEnum {
+  View
+  Proc
+  SQL
+}
+
+enum UserLanguage {
+  EN_US
+  EN_GB
+  EN_CA
+  FR_CA
+}
+
+enum ClientStatus {
+  ACTIVE
+  INACTIVE
+}
