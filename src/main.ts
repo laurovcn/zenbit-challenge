@@ -2,11 +2,15 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { PrismaService } from './database/prisma.service';
 
 async function bootstrap() {
   const logger = new Logger('main');
 
   const app = await NestFactory.create(AppModule, { cors: true });
+
+  const prismaService = app.get(PrismaService);
+  await prismaService.enableShutdownHooks(app);
 
   if (process.env.NODE_ENV === 'development') {
     logger.log(`Initializing Swagger module for ${process.env.NODE_ENV}`);
