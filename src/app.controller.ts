@@ -8,7 +8,7 @@ import { ApiQuery, ApiTags } from '@nestjs/swagger';
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
-  @ApiQuery({ name: 'clientUuid', type: 'string', required: false })
+  @ApiQuery({ name: 'clientUuid', type: 'string', required: true })
   @Get()
   calculateLeasesTotalAmount(@Query() query: ILeasesFilter) {
     return this.appService.calculateLeasesTotalAmount(query);
