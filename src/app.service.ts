@@ -19,20 +19,19 @@ export class AppService {
       end: new Date(yearEnd.format('YYYY-MM-DD')),
     };
 
-    const consult = `
-    SELECT l.uuid AS lease\_uuid, ROUND(SUM(cc\_local.exchange_rate 
-      \* (cd.period_amount \* csc.amount\_pos\_neg)),4) as period\_amount\_extend
-
+    const rawQuery = await this.prisma.$queryRaw`
+      SELECT l.uuid AS lease_uuid, ROUND(SUM(cc_local.exchange_rate * (cd.period_amount * csc.amount_pos_neg)), 4) as period_amount_extend
       FROM lease l 
-      LEFT JOIN cost\_sched cs ON l.uuid = cs.lease\_uuid 
-      LEFT JOIN cost\_sched\_category csc ON cs.cost\_sched\_category\_uuid = csc.uuid 
-      LEFT JOIN client\_currency cc\_local on cs.currency\_code = cc\_local.currency\_code AND cc\_local.client\_uuid = '${query.clientUuid}' 
-      LEFT JOIN cost\_data cd ON cs.uuid = cd.cost\_sched\_uuid
-       
-       WHERE l.deleted\_at IS NULL AND cs.deleted\_at IS NULL AND l.lease\_status = 'Active' AND l.client\_uuid = 
-       '${query.clientUuid}' AND cd.period\_date BETWEEN '${yearPeriod.start}' AND '${yearPeriod.end}' GROUP BY l.uuid`;
+      LEFT JOIN cost_sched cs ON l.uuid = cs.lease_uuid 
+      LEFT JOIN cost_sched_category csc ON cs.cost_sched_category_uuid = csc.uuid 
+      LEFT JOIN client_currency cc_local ON cs.currency_code = cc_local.currency_code AND cc_local.client_uuid = ${query.clientUuid}
+      LEFT JOIN cost_data cd ON cs.uuid = cd.cost_sched_uuid
+      WHERE l.deleted_at IS NULL AND cs.deleted_at IS NULL AND l.lease_status = 'Active' AND l.client_uuid = ${query.clientUuid}
+        AND cd.period_date BETWEEN ${yearPeriod.start} AND ${yearPeriod.end}
+      GROUP BY l.uuid
+    `;
 
-    return await this.prisma.leaseModel.findMany({
+    const prismaStatement = await this.prisma.leaseModel.findMany({
       select: {
         uuid: true,
         costSchedule: {
@@ -75,5 +74,7 @@ export class AppService {
       },
       distinct: 'uuid',
     });
+
+    return { rawQuery, prismaStatement };
   }
 }
