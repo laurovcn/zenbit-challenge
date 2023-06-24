@@ -21,7 +21,7 @@ $ pnpm run start:prod
 # to sync your database
 $ npx prisma db push
 ```
-# zenbit-challenger
+# zenbit-challenge
 
 
 # Code Explanation
