@@ -39,4 +39,4 @@ $ npx prisma db push
 # Routes: 
 - /api to see documentation
 
-- /leases/total-amount'  - Params: clientUuid
+- /leases/total-amount'  - Query Params: clientUuid
