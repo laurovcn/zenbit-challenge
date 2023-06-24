@@ -1,50 +1,49 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from './database/prisma.service';
-import { IFilter } from './interfaces/IFilter';
+import { ILeasesFilter } from './interfaces/ILeasesFilter';
 import * as dayjs from 'dayjs';
 
 @Injectable()
 export class AppService {
   constructor(private prisma: PrismaService) {}
 
-  async getHello(query: IFilter) {
+  async calculateLeasesTotalAmount(query: ILeasesFilter) {
     const currentDate = dayjs();
-
     const yearStart = currentDate.startOf('year');
-
     const yearEnd = currentDate.endOf('year');
 
     const yearPeriod = {
-      start: new Date(yearStart.format('YYYY-MM-DD')),
-      end: new Date(yearEnd.format('YYYY-MM-DD')),
+      start: yearStart.toDate(),
+      end: yearEnd.toDate(),
     };
 
-    const rawQuery = await this.prisma.$queryRaw`
-      SELECT l.uuid AS lease_uuid, ROUND(SUM(cc_local.exchange_rate * (cd.period_amount * csc.amount_pos_neg)), 4) as period_amount_extend
-      FROM lease l 
-      LEFT JOIN cost_sched cs ON l.uuid = cs.lease_uuid 
-      LEFT JOIN cost_sched_category csc ON cs.cost_sched_category_uuid = csc.uuid 
-      LEFT JOIN client_currency cc_local ON cs.currency_code = cc_local.currency_code AND cc_local.client_uuid = ${query.clientUuid}
-      LEFT JOIN cost_data cd ON cs.uuid = cd.cost_sched_uuid
-      WHERE l.deleted_at IS NULL AND cs.deleted_at IS NULL AND l.lease_status = 'Active' AND l.client_uuid = ${query.clientUuid}
-        AND cd.period_date BETWEEN ${yearPeriod.start} AND ${yearPeriod.end}
-      GROUP BY l.uuid
-    `;
-
-    const prismaStatement = await this.prisma.leaseModel.findMany({
+    const leases = await this.prisma.leaseModel.findMany({
+      where: {
+        deletedAt: null,
+        leaseStatus: 'Active',
+        clientUuid: query.clientUuid,
+      },
       select: {
         uuid: true,
+        leaseStatus: true,
+        clientUuid: true,
         costSchedule: {
           where: {
             deletedAt: null,
           },
           select: {
+            uuid: true,
+            costScheduleCategoryUuid: true,
+            currencyCode: true,
             costData: {
               where: {
                 periodDate: {
                   gte: yearPeriod.start,
                   lte: yearPeriod.end,
                 },
+              },
+              select: {
+                periodAmount: true,
               },
             },
             costScheduleCategory: {
@@ -67,14 +66,26 @@ export class AppService {
           },
         },
       },
-      where: {
-        deletedAt: null,
-        leaseStatus: 'Active',
-        clientUuid: query.clientUuid,
-      },
-      distinct: 'uuid',
+      distinct: ['uuid'],
     });
 
-    return { rawQuery, prismaStatement };
+    const leasesWithTotal = leases.map((lease) => {
+      const total = lease.costSchedule.reduce((acc, costSchedule) => {
+        const costData = costSchedule.costData.reduce((acc, costData) => {
+          const exchangeRate =
+            costSchedule.currencyModel.clientCurrencyModels[0].exchangeRate;
+          const amount =
+            costData.periodAmount.toNumber() * exchangeRate.toNumber();
+          return acc + amount;
+        }, 0);
+        return acc + costData;
+      }, 0);
+      return {
+        ...lease,
+        total,
+      };
+    });
+
+    return leasesWithTotal;
   }
 }

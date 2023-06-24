@@ -19,7 +19,6 @@ async function bootstrap() {
       .setTitle('Zenbit-Challenger')
       .setDescription('Official documentation for platform APIs')
       .setVersion('0.1')
-      .addBearerAuth({ in: 'header', type: 'http' })
       .build();
 
     const document = SwaggerModule.createDocument(app, config);
